@@ -9,44 +9,44 @@
 #### Шаг первый. Установка компонентов
 Устанавливаем репозиторий EPEL, который содержит дополнительные пакеты.
 
-```sh
+```
 [nikita@localhost project]$ sudo yum install epel-release
 ```
 Также нам необходимо установить pip диспетчер пакетов Python, и файлы разработки Python, необходимые для сборки uWSGI, незабудем также установить Nginx
-```sh
+```
 [nikita@localhost project]$ sudo yum install python-pip python-devel gcc nginx  
 ```
 #### Шаг второй. Процесс создания виртуальной среды Python
 Для изоляции нашего приложения нам необходимо настроить виртуальную среду.
 Для этого Установим пакет virtualenv:
-```sh
+```
 [nikita@localhost project]$ sudo pip install virtualenv  
 ```
 Создаем виртуальную среду
-```sh
+```
 [nikita@localhost project]$ virtualenv projectvenv  
 ```
 Далее нам необходимо активировать ее
-```sh
+```
 [nikita@localhost project]$ source projectvenv/bin/activate  
 ```
 После активации среды, поле ввода терминала приобретет следующий вид
-```sh
+```
 (projectvenv) [nikita@localhost project]$  
 ```
 #### Шаг третий. Создание, настройка приложения FLASK
 Установка uwsgi и flask:
-```sh
+```
 (projectvenv) [nikita@localhost project]$ pip install uwsgi flask  
 ```
 Процесс создания приложения Flask:
-```sh
+```
 (projectvenv) [nkita@localhost project]$ vi ~/project/app.py  
 ```
 * Код приложения представлн в данном репозитории
 Сохраним и закроем файл нажав ESC, а затем нажав Ctrl+Z.
 Начнем тестирование приложения. Для этого нам необходимо запустить его в фоновом режиме:
-```sh
+```
 (projectvenv) [nikita@localhost project]$ python ~/project/app.py &   
 ```
 > *Serving Flask app 'app' (lazy loading)
@@ -60,18 +60,60 @@
 > *Running on http://10.0.15:5000 (Press CTRL+C) to quit
 
 Далее останавливаем Flask приложение с помощью fg:
-```sh
+```
 (projectvenv) [nikita@localhost project]$ fg python app.py  
 ```
 #### Шаг четверты. Создание точки входа WSGI
 Создаем файл wsgi.py:
-```sh
+```
 (projectvenv) [nikita@localhost project]$ vi ~/project/wsgi.py  
 ```
 В тело файла необходимо вписать:
-```sh
+```
 from project import app  
 if __name__ == "__main__":  
   app.run()  
 ```
 #### Шаг пятый. Настройка и конфигурация uWSGI
+Для начала протестируем что uWSGI может обслуживать наше приложение:
+```
+(projectvenv) [nikita@localhost project]$ uwsgi --socket 0.0.0.0:8000 --protocol=http -w wsgi &  
+```
+Необходимо убедиться, что по указанному ранее адресу, но с портом 8000 находится содержимое html страницы. Выведем 5 первых строк.
+```
+(projectvenv) [nikita@localhost project]$ curl -L http://10.0.15:8000 | head -n 5  
+```
+![image](https://user-images.githubusercontent.com/56980417/121802114-a949e700-cc43-11eb-9fb3-97aea61d9fd8.png)
+После этого приостановим uwsgi:
+```
+(projectvenv) [nikita@localhost project]$ fg  uwsgi --socket 0.0.0.0:8000 --protocol=http -w wsgi
+```
+Завершается работа с виртуальной средой. Выйдем из нее командой deactivate:
+```
+(projectvenv) [nikita@localhost project]$ deactivate  
+```
+Необходимо создать файл конфигурации uWSGI:
+```
+[nikita@localhost project]$ vi ~/project/project.ini  
+```
+В тело файла напишем:
+```
+[uwsgi]  
+module = wsgi  
+master = true  
+processes = 3  
+socket = project.sock  
+chmod-socket = 660  
+vacuum = true   
+```
+где "module = wsgi" - исполняемый модуль, созданный ранее файл "wsgi.py";
+
+"master = true" - означает что uWSGI будет запускаться в главном режиме;
+
+"processes = 3" - будет иметь 3 рабочих процесса для обслуживания запросов;
+
+"socket = project.sock" - сокет, который будет использовать uWSGI;
+
+"chmod-socket = 660" - права на процесс uWSGI;
+
+"vacuum = true" - сокет будет очищен по завершении работы процесса;
