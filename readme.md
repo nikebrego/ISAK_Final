@@ -117,3 +117,95 @@ vacuum = true
 "chmod-socket = 660" - права на процесс uWSGI;
 
 "vacuum = true" - сокет будет очищен по завершении работы процесса;
+#### Шаг шестой. Создание файла модуля systemd
+Создадим файл службы:
+```
+[nikita@localhost project]$ sudo vi /etc/systemd/system/project.service   
+```
+В тело файла напишем:
+```
+[Unit]  
+Description=uWSGI for project  
+After=network.target  
+[Service]  
+User=nikita  
+Group=nginx  
+WorkingDirectory=/home/nikita/project  
+Environment="PATH=/home/nikita/project/projectvenv/bin"  
+ExecStart=/home/nikita/project/projectvenv/bin/uwsgi --ini project.ini  
+[Install]  
+WantedBy=multi-user.target  
+```
+где "[Unit]", "[Service]", "[Install]" - заголовки разделов;
+
+"Description" - описание службы;
+
+"After" - цель, по достижении которой будет производиться запуск;
+
+"User" - пользователь;
+
+"Group" - группа;
+
+"WorkingDirectory" - рабочая директория в которой хранятся исполняемые файлы;
+
+"Environment" - директория виртуальной среды;
+
+"ExecStart" - команда для запуска процесса;
+
+"WantedBy" - когда запускаться службе.
+
+Запустим созданную службу:
+```
+[nikita@localhost project]$ sudo systemctl start project  
+[nikita@localhost project]$ sudo systemctl enable project  
+```
+#### Шаг седьмой. Настройка NGINX
+Теперь необходимо настроить Nginx для передачи веб-запросов в сокет с использованием uWSGI протокола.
+Откроем файл конфигурации Nginx:
+```
+[nikita@localhost project]$ sudo vi /etc/nginx/nginx.conf  
+```
+Необходимо найти блок server {} в теле http:
+```
+...  
+  http {  
+  ...  
+    include /etc/nginx/conf.d/*.conf;  
+    *
+    server {  
+        listen 80 default_server;  
+        }  
+  ...  
+  }  
+...  
+```
+Чуть выше создаем свой блок
+```
+server {  
+  listen 80;  
+  server_name 10.0.2.15;  
+  
+  location / {
+    include uwsgi_params;
+    uwsgi_pass unix:/home/nikita/project/project.sock;
+}
+```
+Закроем и сохраним файл.
+Добавим nginx пользователя в свою группу пользователей с помощью следующей команды:
+```
+[nikita@localhost project]$ sudo usermod -a -G nikita nginx  
+```
+Предоставим группе пользователей права на выполнение в домашнем каталоге:
+```
+[nikita@localhost project]$ chmod 710 /home/nikita
+```
+Запускаем Nginx:
+```
+[nikita@localhost project]$ sudo systemctl start nginx  
+[nikita@localhost project]$ sudo systemctl enable nginx  
+```
+### Вывод
+В ходе выполнения данной курсовой работы было создано приложение Flask в виртуальной средe, которое позволяет загружать файлы формата ".tif", а так же получать цветное изображение NDVI. 
+Так же была создана и настроена точка входа WSGI, благодаря которой любой сервер приложений, поддерживающий WSGI, сможет взаимодействовать с приложением Flask. 
+В итоге была создана служба systemd, необходимая для автоматического запуска uWSGI при загрузке системы. 
+В заключении был настроен серверный блок Nginx.
