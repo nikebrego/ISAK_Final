@@ -49,3 +49,29 @@
 ```sh
 (projectvenv) [nikita@localhost project]$ python ~/project/app.py &   
 ```
+> *Serving Flask app 'app' (lazy loading)
+> 
+> *Environment: prodction
+> 
+> *Debug mode: on
+> 
+> *Running on all addresses.
+> 
+> *Running on http://10.0.15:5000 (Press CTRL+C) to quit
+
+Далее останавливаем Flask приложение с помощью fg:
+```sh
+(projectvenv) [nikita@localhost project]$ fg python app.py  
+```
+#### Шаг четверты. Создание точки входа WSGI
+Создаем файл wsgi.py:
+```sh
+(projectvenv) [nikita@localhost project]$ vi ~/project/wsgi.py  
+```
+В тело файла необходимо вписать:
+```sh
+from project import app  
+if __name__ == "__main__":  
+  app.run()  
+```
+#### Шаг пятый. Настройка и конфигурация uWSGI
