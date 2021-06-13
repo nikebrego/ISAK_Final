@@ -35,4 +35,17 @@
 (projectvenv) [nikita@localhost project]$  
 ```
 #### Шаг третий. Создание, настройка приложения FLASK
-
+Установка uwsgi и flask:
+```sh
+(projectvenv) [nikita@localhost project]$ pip install uwsgi flask  
+```
+Процесс создания приложения Flask:
+```sh
+(projectvenv) [nkita@localhost project]$ vi ~/project/app.py  
+```
+* Код приложения представлн в данном репозитории
+Сохраним и закроем файл нажав ESC, а затем нажав Ctrl+Z.
+Начнем тестирование приложения. Для этого нам необходимо запустить его в фоновом режиме:
+```sh
+(projectvenv) [nikita@localhost project]$ python ~/project/app.py &   
+```
